@@ -5,7 +5,7 @@ use strict;
 #   feed it a marc record and it breaks it.  --> Much less
 #   math for the script to do in this case.
 
-## Instead of the complicated logic down below, use local $/ = "\x1d"
+## Use local $/ = "\x1d"
 ## This changes the line separator, so each MARC record will be read
 ## in as though it's a line
 
