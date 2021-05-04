@@ -1,0 +1,60 @@
+#!/usr/bin/perl -w
+use strict;
+
+#  To make a MARC file.  That is, convert from text to real MARC
+#  Last updated by and (c)John Boggs 12/13/07
+#
+#  LDR....
+#  001 ocm0998877
+#  245 14|aThe Bonds of Librarianship
+
+my @input;
+while (<>) {
+   push (@input, $_);
+   if ($_ eq "EOR\n") {
+      my $toprint = &makemarc(@input);
+      print("$toprint");
+      @input = qw();
+   }
+}
+
+
+sub makemarc {   # Takes as arguments the lines of a text MARC record as
+                 # created by ripmarc.  Turns them into and returns a
+                 # true MARC record
+   my $ldr;           # Leader
+   my $directory;     # Directory
+   my $field;         # Array of fields
+   my $varflds;       # "Body" of MARC record -- the variable fields
+   my $offset = 0;    # Offset for use in Directory
+   my $recln;         # Record length
+   my $baseaddr;      # Base address of varflds
+   my $marcrec;       # the finished product
+
+   chomp($ldr = substr(shift, 3));  # Leader
+   chomp($field = shift);
+   while ($field ne "EOR") {
+      $field =~ s/[|]/\x1f/g;
+      $field =~ s/[{]vbar[}]/|/g;
+      my $tag = substr($field,0,3);
+      my $fldln = sprintf("%04d",length($field) - 3);
+      my $startpos = sprintf("%05d",$offset);
+      $directory .= $tag . $fldln . $startpos;
+      $offset += $fldln;
+
+      $varflds .= substr($field, 4) . "\x1e";
+      chomp($field = shift);
+   } #while
+
+   $directory .= "\x1e";
+   $varflds .= "\x1d";
+#   $varflds =~ s/[|]/\x1f/g;
+#   $varflds =~ s/[{]vbar[}]/|/g;
+   $baseaddr = sprintf("%05d", 24 + length($directory));
+   $recln = sprintf("%05d", $baseaddr + length($varflds));
+   substr($ldr,0,5) = $recln;
+   substr($ldr,12,5) = $baseaddr;
+
+   $marcrec = $ldr . $directory . $varflds;
+
+}  # sub makemarc

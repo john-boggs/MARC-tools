@@ -1,0 +1,53 @@
+#!/usr/bin/perl -w
+use strict;
+use Getopt::Std;
+
+our ($opt_r, $opt_f);
+
+### splitmarc: split a MARC file into multiple smaller files
+### Written by John D. Boggs, jboggs@cityofberkeley.info 12/6/19
+
+local $/ = "\x1d";  ## Use end-of-record indicator as \n
+
+getopts ('r:f:');
+
+if ((!defined($opt_r)) or (!defined($opt_f)) or (!($opt_f =~ m/^[^#]*#[^#]*/))){
+ print "Usage: splitmarc -rRECORDS -fFILEPATTERN\n";
+ print "RECORDS = the number of MARC records per file.\n";
+ print "FILEPATTERN = pattern for the filename for output records.\n";
+ print "Put a # where you want the file number. E.g.:\n";
+ print "  -fMYRECS#.mrc will create a series of files as follows:\n";
+ print "    MYRECS001.mrc\n";
+ print "    MYRECS002.mrc\n";
+ print "    MYRECS003.mrc\n";
+ print "  on up to however many files are required.\n\n";
+ exit;
+} #if
+
+### transfer the opt variables to better-named ones for ease of code-reading
+my $numrecs = $opt_r;
+my $filepattern = $opt_f;
+(my $file_start, my $file_end) = ($opt_f =~ /^(.*)#(.*)$/);
+
+my $linenum = 1;
+my $filenum = "001";
+my $outfile = $file_start . $filenum . $file_end;
+
+open ( OUTFILE, ">$outfile");
+binmode OUTFILE;
+
+while (<>) {
+ print OUTFILE;
+ if ($linenum == $numrecs) {
+  close OUTFILE;
+  ++$filenum;
+  $linenum = 0;
+  $outfile = $file_start . $filenum . $file_end;
+  open ( OUTFILE, ">$outfile");
+  binmode OUTFILE;
+ }
+ ++$linenum;
+
+} # while (<>)
+
+close OUTFILE;

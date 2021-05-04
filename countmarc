@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+use strict;
+
+local $/ = "\x1d";  ## Use end-of-record indicator as \n
+my $linecount = 0;
+
+while (<>) {
+  ++$linecount;
+}
+
+print "$linecount\n";

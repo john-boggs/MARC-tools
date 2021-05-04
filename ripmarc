@@ -1,0 +1,57 @@
+#!/usr/bin/perl -w
+use strict;
+
+# subroutine breakmarc:
+#   feed it a marc record and it breaks it.  --> Much less
+#   math for the script to do in this case.
+
+## Instead of the complicated logic down below, use local $/ = "\x1d"
+## This changes the line separator, so each MARC record will be read
+## in as though it's a line
+
+local $/ = "\x1d";
+
+while (<>) {
+      my @textrec = &breakmarc($_);
+      foreach (@textrec) {
+         print ("$_\n");
+      }
+}
+
+#
+# Subroutines
+#
+
+sub breakmarc {   # takes one argument -- a MARC record
+                  # converts that MARC record to human-readable format
+   my $record = shift;
+
+   my $baseaddr = substr($record, 12, 5); # Base address of record data
+   my $directory = substr($record, 24, $baseaddr - 25);
+   my $numfields = (length($directory) / 12);
+   my $fields = substr($record, $baseaddr);
+   my @field; # Array containing MARC fields -- 245 14|aTitle / by Author
+   $field[0] = "LDR" . substr($record, 0, 24); # field[0] is the leader
+   my $fieldnum = 1;
+
+   {  # Put together directory entries with their fields
+      my $dirpos = (($fieldnum - 1) * 12); # Marker for where in the
+                                         # directory we are
+      my $tag = substr($directory, $dirpos, 3);  # MARC Tag
+      my $fldln = substr($directory, $dirpos + 3, 4); # Field length
+      my $startpos = substr($directory, $dirpos + 7, 5);
+                                                         # Starting position
+      $field[$fieldnum] = "$tag " . substr($fields, $startpos, $fldln - 1);
+      $field[$fieldnum] =~ s/\|/{vbar}/g; # Replace any | with {vbar}
+      $field[$fieldnum] =~ s/\x1f/|/g;
+                                   # Use | as subf delim for readability
+
+      if ($fieldnum == $numfields) {
+         $field[$fieldnum + 1] = "EOR";
+         return @field;
+         last;
+      }
+      $fieldnum++;
+      redo;
+   }
+} # sub breakmarc
